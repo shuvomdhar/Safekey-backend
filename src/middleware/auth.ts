@@ -10,7 +10,7 @@ export type AuthUser = {
   full_name: string | null;
   has_password: boolean;
   has_google: boolean;
-  status: 'active' | 'archived';
+  status: 'active' | 'inactive' | 'archived';
   created_at: string;
 };
 
@@ -59,7 +59,7 @@ async function resolveUser(identity: SupabaseIdentity): Promise<AuthUser> {
           .select('id, status')
           .eq('email', identity.email)
           .maybeSingle()
-      ) as { id: number; status: 'active' | 'archived' } | null;
+      ) as { id: number; status: 'active' | 'inactive' | 'archived' } | null;
 
       if (profile?.status === 'archived') {
         throw new ApiError(

@@ -22,7 +22,7 @@ const USER_COLUMNS = 'id, supabase_user_id, email, full_name, has_password, has_
 
 type ProfileByEmail = {
   id: number;
-  status: 'active' | 'archived';
+  status: 'active' | 'inactive' | 'archived';
   supabase_user_id: string | null;
 };
 
@@ -62,6 +62,24 @@ async function fetchUser(userId: number): Promise<AuthUser> {
  */
 authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: publicUser(req.user!) });
+});
+
+/**
+ * POST /api/auth/logout — mark the profile inactive.
+ *
+ * `api_resolve_user` flips a non-archived profile back to `active` on every
+ * authenticated request, so the next sign-in restores it automatically. Call
+ * this before `supabase.auth.signOut()` while the bearer token is still valid.
+ */
+authRouter.post('/logout', requireAuth, async (req, res) => {
+  unwrap(
+    await supabaseAdmin
+      .from('users')
+      .update({ status: 'inactive' })
+      .eq('id', req.user!.id)
+  );
+
+  res.status(204).end();
 });
 
 const registerSchema = z.object({

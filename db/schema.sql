@@ -50,7 +50,7 @@ create table if not exists users (
   has_password      boolean not null default false,
   has_google        boolean not null default false,
   status            text not null default 'active'
-                      check (status in ('active', 'archived')),
+                      check (status in ('active', 'inactive', 'archived')),
   archived_at       timestamptz,
   last_login_at     timestamptz,
   created_at        timestamptz not null default now(),
@@ -83,11 +83,13 @@ alter table users drop column if exists google_id;
 
 do $$
 begin
-  if not exists (select 1 from pg_constraint where conname = 'users_status_check') then
-    alter table users
-      add constraint users_status_check
-      check (status in ('active', 'archived'));
+  if exists (select 1 from pg_constraint where conname = 'users_status_check') then
+    alter table users drop constraint users_status_check;
   end if;
+
+  alter table users
+    add constraint users_status_check
+    check (status in ('active', 'inactive', 'archived'));
 end;
 $$;
 
@@ -329,6 +331,7 @@ begin
   if found then
     update users
        set last_login_at = now(),
+           status = case when status = 'archived' then 'archived' else 'active' end,
            full_name = coalesce(full_name, p_full_name),
            has_password = has_password or p_has_password,
            has_google = has_google or p_has_google
@@ -353,6 +356,7 @@ begin
     begin
       update users
          set supabase_user_id = p_supabase_user_id,
+             status = case when status = 'archived' then 'archived' else 'active' end,
              full_name = coalesce(full_name, p_full_name),
              has_password = has_password or p_has_password,
              has_google = has_google or p_has_google,
